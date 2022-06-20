@@ -70,7 +70,8 @@ async def delete(id: models.UUID =
 
     db = MMDatabase()
     res = await db.delete_item(id)
-    return res
+    if res is None:
+        return JSONResponse(content=models.Error(code=404, message='Item not found').dict(), status_code=404)
 
 
 @app.get('/nodes/{id}', responses=responses.nodes_responses, tags=[models.Tags.main])
@@ -79,10 +80,24 @@ async def nodes(id: models.UUID =
     """ Получить информацию об элементе по идентификатору.
     При получении информации о категории также предоставляется информация о её дочерних элементах. """
 
+    async def get_item_hierarchy(db_record):
+        item = models.ShopUnit(**db_record, children=None)
+        print(item.name, item.parentId)
+        if item.type == models.ShopUnitType.offer:
+            return item
+        item.children = list()
+        children = await db.get_item_children(item.id)
+        for child in children:
+            print(child)
+            item.children.append(await get_item_hierarchy(child))
+        return item
+
     db = MMDatabase()
     item = await db.get_item(id)
-
-    return models.ShopUnitStatisticUnit(**item[0])
+    if item is None:
+        return JSONResponse(content=models.Error(code=404, message='Item not found').dict(), status_code=404)
+    item = await get_item_hierarchy(item)
+    return item.dict()
 
 
 @app.get('/sales', responses=responses.sales_responses, tags=[models.Tags.additional])

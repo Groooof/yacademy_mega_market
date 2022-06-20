@@ -101,7 +101,7 @@ class MMDatabase(DatabaseCore):
             id uuid DEFAULT uuid_generate_v4(),
             name VARCHAR (255) NOT NULL,
             date TIMESTAMP with time zone NOT NULL,
-            parentId uuid,
+            "parentId" uuid,
             type item_type NOT NULL,
             price INT,
             PRIMARY KEY (id)
@@ -116,7 +116,7 @@ class MMDatabase(DatabaseCore):
                     item_id uuid,
                     item_name VARCHAR (255) NOT NULL,
                     item_date TIMESTAMP with time zone NOT NULL,
-                    item_parentId uuid,
+                    "item_parentId" uuid,
                     item_type item_type NOT NULL,
                     item_price INT,
                     PRIMARY KEY (id)
@@ -141,11 +141,11 @@ class MMDatabase(DatabaseCore):
         BEGIN
             IF EXISTS (SELECT 1 FROM items_history WHERE item_id = NEW.id AND item_date = NEW.date) THEN 
                 UPDATE items_history 
-                SET (item_name, item_parentId, item_type, item_price) = (NEW.name, NEW.parentId, NEW.type, NEW.price) 
+                SET (item_name, "item_parentId", item_type, item_price) = (NEW.name, NEW."parentId", NEW.type, NEW.price) 
                 WHERE item_id = NEW.id;
             ELSE  
-                INSERT INTO items_history (item_id, item_name, item_date, item_parentId, item_type, item_price) 
-                VALUES (NEW.id, NEW.name, NEW.date, NEW.parentId, NEW.type, NEW.price);
+                INSERT INTO items_history (item_id, item_name, item_date, "item_parentId", item_type, item_price) 
+                VALUES (NEW.id, NEW.name, NEW.date, NEW."parentId", NEW.type, NEW.price);
             END IF;
             RETURN NEW;
         END;
@@ -205,19 +205,20 @@ class MMDatabase(DatabaseCore):
         RETURNS trigger AS 
         $$
         BEGIN
-            IF NEW.parentId != OLD.parentId THEN
-                IF OLD.parentId IS NOT NULL THEN
-                    UPDATE items SET date = NEW.date WHERE id = OLD.parentId;
-                    UPDATE items SET price = (SELECT * FROM get_avg_price(OLD.parentId)) WHERE id = OLD.parentId;
+
+            IF NEW."parentId" != OLD."parentId" THEN
+                IF OLD."parentId" IS NOT NULL THEN
+                    UPDATE items SET date = NEW.date WHERE id = OLD."parentId";
+                    UPDATE items SET price = (SELECT * FROM get_avg_price(OLD."parentId")) WHERE id = OLD."parentId";
                 END IF;
-                IF NEW.parentId IS NOT NULL THEN
-                    UPDATE items SET date = NEW.date WHERE id = NEW.parentId;
-                    UPDATE items SET price = (SELECT * FROM get_avg_price(NEW.parentId)) WHERE id = NEW.parentId;
+                IF NEW."parentId" IS NOT NULL THEN
+                    UPDATE items SET date = NEW.date WHERE id = NEW."parentId";
+                    UPDATE items SET price = (SELECT * FROM get_avg_price(NEW."parentId")) WHERE id = NEW."parentId";
                 END IF;
-            ELSIF OLD.parentId IS NOT NULL THEN
-                UPDATE items SET date = NEW.date WHERE id = OLD.parentId;
-                IF OLD.price != NEW.price THEN
-                    UPDATE items SET price = (SELECT * FROM get_avg_price(OLD.parentId)) WHERE id = OLD.parentId;
+            ELSIF OLD."parentId" IS NOT NULL THEN
+                UPDATE items SET date = NEW.date WHERE id = OLD."parentId";
+                IF OLD.price != NEW.price OR NEW.price IS NULL THEN
+                    UPDATE items SET price = (SELECT * FROM get_avg_price(OLD."parentId")) WHERE id = OLD."parentId";
                 END IF;
             END IF;
             RETURN NEW;
@@ -233,10 +234,10 @@ class MMDatabase(DatabaseCore):
         RETURNS trigger AS 
         $$
         BEGIN
-            IF NEW.parentId IS NOT NULL THEN
-                UPDATE items SET date = NEW.date WHERE id = NEW.parentId;
+            IF NEW."parentId" IS NOT NULL THEN
+                UPDATE items SET date = NEW.date WHERE id = NEW."parentId";
                 IF NEW.type = 'OFFER' THEN 
-                    UPDATE items SET price = (SELECT * FROM get_avg_price(NEW.parentId) as avg) WHERE id = NEW.parentId;
+                    UPDATE items SET price = (SELECT * FROM get_avg_price(NEW."parentId") as avg) WHERE id = NEW."parentId";
                 END IF;
             END IF;
             RETURN NEW;
@@ -252,8 +253,8 @@ class MMDatabase(DatabaseCore):
         RETURNS trigger AS 
         $$
         BEGIN
-            IF OLD.parentId IS NOT NULL THEN
-                UPDATE items SET price = (SELECT * FROM get_avg_price(OLD.parentId)) WHERE id = OLD.parentId;
+            IF OLD."parentId" IS NOT NULL THEN
+                UPDATE items SET price = (SELECT * FROM get_avg_price(OLD."parentId")) WHERE id = OLD."parentId";
             END IF;
             RETURN NEW;
         END;
@@ -268,9 +269,10 @@ class MMDatabase(DatabaseCore):
         RETURNS trigger AS 
         $$
         BEGIN
+            DELETE FROM items_history WHERE item_id = OLD.id;
             IF OLD.type = 'CATEGORY' THEN
-                DELETE FROM items WHERE parentId = OLD.id;
-                DELETE FROM items_history WHERE item_parentId = OLD.id OR item_id = OLD.id;
+                DELETE FROM items WHERE "parentId" = OLD.id;
+                DELETE FROM items_history WHERE "item_parentId" = OLD.id;
             END IF;
             RETURN NEW;
         END;
@@ -286,11 +288,11 @@ class MMDatabase(DatabaseCore):
         $$
         BEGIN
             RETURN CAST(ROUND(AVG(price)-0.5) AS INT) FROM items 
-                WHERE type = 'OFFER' AND parentId IN (
+                WHERE type = 'OFFER' AND "parentId" IN (
                     WITH RECURSIVE temp AS (
                         SELECT CAST($1 AS uuid) AS id
                     UNION
-                        SELECT items.id FROM items JOIN temp ON (items.parentId = uuid(temp.id) AND type = 'CATEGORY')
+                        SELECT items.id FROM items JOIN temp ON (items."parentId" = uuid(temp.id) AND type = 'CATEGORY')
                     ) 
                     SELECT * FROM temp);
         END;
@@ -305,7 +307,7 @@ class MMDatabase(DatabaseCore):
         RETURNS trigger AS 
         $$
         BEGIN
-            IF (SELECT type FROM items WHERE id = NEW.parentId) != 'CATEGORY' THEN
+            IF (SELECT type FROM items WHERE id = NEW."parentId") != 'CATEGORY' THEN
                 RAISE EXCEPTION 'Родителем элемента может быть только категория!';
             END IF;
             IF TG_OP = 'UPDATE' THEN 
@@ -323,43 +325,36 @@ class MMDatabase(DatabaseCore):
 
     async def insert_items(self, items: List[tuple]):
         command = '''
-        INSERT INTO items (id, name, date, parentId, type, price) 
+        INSERT INTO items (id, name, date, "parentId", type, price) 
         VALUES ($1, $2, $3, $4, $5, $6) 
         ON CONFLICT (id) DO UPDATE 
-        SET (name, date, parentId, type, price) = ($2, $3, $4, $5, $6) 
+        SET (name, date, "parentId", type, price) = ($2, $3, $4, $5, $6) 
         '''
         await self.execute(command, items, executemany=True)
 
     async def delete_item(self, uuid):
-        command_1 = '''DELETE FROM items WHERE id = $1 or parentId = $1;'''
-        command_2 = '''DELETE FROM items_history WHERE item_id = $1 OR item_parentId = $1;'''
-        await self.execute(command_1, (uuid, ), execute=True)
-        await self.execute(command_2, (uuid, ), execute=True)
+        command_1 = '''DELETE FROM items WHERE id = $1 or "parentId" = $1 IS TRUE RETURNING 1;'''
+        command_2 = '''DELETE FROM items_history WHERE item_id = $1 OR "item_parentId" = $1;'''
+        res = await self.execute(command_1, (uuid, ), fetchval=True)
+        # await self.execute(command_2, (uuid, ), execute=True)
+        return res
 
     async def get_item(self, uuid):
-        command = '''
-        WITH RECURSIVE temp AS (
-            SELECT *, children FROM items WHERE id = $1;
-        UNION
-            INSERT INTO temp 
-            SELECT items.id FROM items JOIN temp ON (items.parentId = uuid(temp.id) AND type = 'CATEGORY')
-        ) 
-        SELECT * FROM temp);
-        '''
-        command = '''
-        SELECT (SELECT name FROM items WHERE parentId = $1) as arr;
-        
-        '''
+        command = '''SELECT * FROM items WHERE id = $1;'''
+        return await self.execute(command, (uuid, ), fetchrow=True)
+
+    async def get_item_children(self, uuid):
+        command = '''SELECT * FROM items WHERE "parentId" = $1;'''
         return await self.execute(command, (uuid, ), fetch=True)
 
     async def get_avg_price(self, cat_id):
         command = '''
             SELECT CAST(ROUND(AVG(price)-0.5) AS INT) FROM items 
-                WHERE type = 'OFFER' AND parentId IN (
+                WHERE type = 'OFFER' AND "parentId" IN (
                     WITH RECURSIVE temp AS (
                         SELECT CAST($1 AS uuid) AS id
                     UNION
-                        SELECT items.id FROM items JOIN temp ON (items.parentId = uuid(temp.id) AND type = 'CATEGORY')
+                        SELECT items.id FROM items JOIN temp ON (items."parentId" = uuid(temp.id) AND type = 'CATEGORY')
                     ) 
                     SELECT * FROM temp);
             '''
@@ -403,9 +398,24 @@ async def main():
     # res = await db.get_avg_price('3fa85f64-5717-4562-b3fc-000000000003')
     # await db.create_function_get_avg_price()
     # res = await db.execute(''' SELECT * FROM get_avg_price($1) as avg ''', ('3fa85f64-5717-4562-b3fc-000000000001',), fetch=True)
-    res = await db.get_item('3fa85f64-5717-4562-b3fc-000000000001')
     # res = models.ShopUnitStatisticUnit(**res[0])
-    pprint(res)
+
+    async def get_item_hierarchy(db_record):
+        item = models.ShopUnit(**db_record, children=None)
+        print(item.name, item.parentId)
+        if item.type == models.ShopUnitType.offer:
+            return item
+        item.children = list()
+        children = await db.get_item_children(item.id)
+        for child in children:
+            print(child)
+            item.children.append(await get_item_hierarchy(child))
+        return item.dict()
+
+    uuid = '3fa85f64-5717-4562-b3fc-000000000001'
+    item = await db.get_item(uuid)
+    item = await get_item_hierarchy(item)
+    pprint(item)
     print(time()-s)
 
 
@@ -414,18 +424,3 @@ if __name__ == '__main__':
 
     loop = asyncio.get_event_loop()
     loop.run_until_complete(main())
-
-    '''
-    IF NEW.parentId != OLD.parentId:
-        IF OLD.parentId IS NOT NULL:
-            UPDATE items SET date = NEW.date WHERE id = OLD.parentId;
-            UPDATE items SET price = (SELECT AVG(price) FROM items WHERE parentId = OLD.parentId) WHERE id = OLD.parentId;
-        IF NEW.parentId IS NOT NULL:
-            UPDATE items SET date = NEW.date WHERE id = NEW.parentId;
-            UPDATE items SET price = (SELECT AVG(price) FROM items WHERE parentId = NEW.parentId) WHERE id = NEW.parentId;
-    ELIF OLD.parentId IS NOT NULL:
-        UPDATE items SET date = NEW.date WHERE id = OLD.parentId;
-        IF OLD.price != NEW.price:
-            UPDATE items SET price = (SELECT AVG(price) FROM items WHERE parentId = OLD.parentId) WHERE id = OLD.parentId;
-    '''
-
