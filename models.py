@@ -17,6 +17,10 @@ CHILDREN_FIELD = Field(description='Список всех дочерних то�
 UPDATEDATE_FIELD = Field(description='Время обновления добавляемых товаров/категорий', nullable=False, example='2022-05-28T21:12:01.000Z')
 
 
+def convert_datetime_to_iso_8601_with_z_suffix(dt: datetime) -> str:
+    return dt.strftime('%Y-%m-%dT%H:%M:%SZ')
+
+
 class Tags(Enum):
     main = "Базовые задачи"
     additional = "Дополнительные задачи"
@@ -72,6 +76,11 @@ class ShopUnitStatisticUnit(BaseModel):
 
 class ShopUnitStatisticResponse(BaseModel):
     items: List[ShopUnitStatisticUnit] = Field(description='История в произвольном порядке.', nullable=False)
+
+    class Config:
+        json_encoders = {
+            datetime: lambda x: x.strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3] + 'Z',
+        }
 
 
 class Error(BaseModel):

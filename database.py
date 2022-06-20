@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import Union, Iterable, List
 import asyncpg
 from asyncpg import Connection
@@ -333,11 +334,8 @@ class MMDatabase(DatabaseCore):
         await self.execute(command, items, executemany=True)
 
     async def delete_item(self, uuid):
-        command_1 = '''DELETE FROM items WHERE id = $1 or "parentId" = $1 IS TRUE RETURNING 1;'''
-        command_2 = '''DELETE FROM items_history WHERE item_id = $1 OR "item_parentId" = $1;'''
-        res = await self.execute(command_1, (uuid, ), fetchval=True)
-        # await self.execute(command_2, (uuid, ), execute=True)
-        return res
+        command = '''DELETE FROM items WHERE id = $1 or "parentId" = $1 IS TRUE RETURNING 1;'''
+        await self.execute(command, (uuid, ), execute=True)
 
     async def get_item(self, uuid):
         command = '''SELECT * FROM items WHERE id = $1;'''
@@ -360,9 +358,29 @@ class MMDatabase(DatabaseCore):
             '''
         return await self.execute(command, (cat_id,), fetchval=True)
 
+    async def get_last_24h(self, date):
+        command = '''
+        SELECT item_id as id, item_name as name, item_date as date, "item_parentId" as "parentId", item_type as type, item_price as price  
+        FROM items_history WHERE item_type = 'OFFER' AND item_date <= $1 AND item_date >= $1 - INTERVAL '24 hour';
+        '''
+        return await self.execute(command, (date,), fetch=True)
 
-# обновление даты категории
-# удаление подкатегорий
+    async def get_statistics(self, uuid, date_start, date_end):
+        if date_start is None: date_start = datetime(1971, 1, 1, 0, 0)
+        if date_end is None: date_end = datetime(3000, 1, 1, 0, 0)
+        command = '''
+        SELECT item_id as id, item_name as name, item_date as date, "item_parentId" as "parentId", item_type as type, item_price as price   
+        FROM items_history 
+        WHERE 
+            item_id = $1 AND
+            item_date >= $2 AND
+            item_date < $3;
+        '''
+        return await self.execute(command, (uuid, date_start, date_end), fetch=True)
+
+    async def item_exists(self, uuid):
+        command = '''SELECT EXISTS(SELECT id FROM items WHERE id = $1);'''
+        return await self.execute(command, (uuid, ), fetchval=True)
 
 
 async def main():
@@ -371,52 +389,6 @@ async def main():
     from time import time
     db = MMDatabase()
     await db.create_pool()
-
-    # res = await db.create_extension_uuid_ossp()
-    # res = await db.execute('''SELECT * FROM pg_extension;''', fetch=True)
-    # res = await db.execute('''SELECT uuid_generate_v4()''', fetch=True)
-    # res = await db.create_main_table()
-    # res = await db.create_enum_type()
-    # command = ''''''
-    # res = await db.execute(command, fetch=True)
-    # res = await db.db_init()
-    # datetime.strptime('2022-01-01T08:00:00.000Z', '%Y-%m-%dT%H:%M:%S')
-    # data = {'name': 'Товар-1',
-    #         'date': datetime.strptime('2022-01-01T08:00:00', '%Y-%m-%dT%H:%M:%S'),
-    #         'parentId': None,
-    #         'type': 'OFFER',
-    #         'price': 100}
-    command = '''
-    DELETE FROM items_history;
-    '''
-    # res = await db.execute(command, execute=True)
-    # res = await db.delete_item('3fa85f64-5717-4562-b3fc-2c963f66a999')
-    # res = await db.update_cat_avg_prices()
-    # res = await db.db_init()
-
-    s = time()
-    # res = await db.get_avg_price('3fa85f64-5717-4562-b3fc-000000000003')
-    # await db.create_function_get_avg_price()
-    # res = await db.execute(''' SELECT * FROM get_avg_price($1) as avg ''', ('3fa85f64-5717-4562-b3fc-000000000001',), fetch=True)
-    # res = models.ShopUnitStatisticUnit(**res[0])
-
-    async def get_item_hierarchy(db_record):
-        item = models.ShopUnit(**db_record, children=None)
-        print(item.name, item.parentId)
-        if item.type == models.ShopUnitType.offer:
-            return item
-        item.children = list()
-        children = await db.get_item_children(item.id)
-        for child in children:
-            print(child)
-            item.children.append(await get_item_hierarchy(child))
-        return item.dict()
-
-    uuid = '3fa85f64-5717-4562-b3fc-000000000001'
-    item = await db.get_item(uuid)
-    item = await get_item_hierarchy(item)
-    pprint(item)
-    print(time()-s)
 
 
 if __name__ == '__main__':

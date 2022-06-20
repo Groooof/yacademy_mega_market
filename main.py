@@ -69,9 +69,9 @@ async def delete(id: models.UUID =
     """ Удалить элемент по идентификатору. При удалении категории удаляются все дочерние элементы. """
 
     db = MMDatabase()
-    res = await db.delete_item(id)
-    if res is None:
+    if not await db.item_exists(id):
         return JSONResponse(content=models.Error(code=404, message='Item not found').dict(), status_code=404)
+    await db.delete_item(id)
 
 
 @app.get('/nodes/{id}', responses=responses.nodes_responses, tags=[models.Tags.main])
@@ -82,7 +82,6 @@ async def nodes(id: models.UUID =
 
     async def get_item_hierarchy(db_record):
         item = models.ShopUnit(**db_record, children=None)
-        print(item.name, item.parentId)
         if item.type == models.ShopUnitType.offer:
             return item
         item.children = list()
@@ -93,9 +92,10 @@ async def nodes(id: models.UUID =
         return item
 
     db = MMDatabase()
-    item = await db.get_item(id)
-    if item is None:
+    if not await db.item_exists(id):
         return JSONResponse(content=models.Error(code=404, message='Item not found').dict(), status_code=404)
+
+    item = await db.get_item(id)
     item = await get_item_hierarchy(item)
     return item.dict()
 
@@ -105,7 +105,9 @@ async def sales(date: models.datetime =
                 Query(description='Дата и время запроса.', example='2022-05-28T21:12:01.000Z')):
     """ Получение списка товаров, цена которых была обновлена за последние 24 часа включительно. """
 
-    return {'msg': 'This is sales endpoint'}
+    db = MMDatabase()
+    items = await db.get_last_24h(date)
+    return models.ShopUnitStatisticResponse(items=items)
 
 
 @app.get('/node/{id}/statistic', responses=responses.statistic_responses, tags=[models.Tags.additional])
@@ -121,4 +123,9 @@ async def statistics(id: models.UUID =
     """ Получение статистики (истории обновлений) по товару/категории за заданный полуинтервал [from, to).
     Статистика по удаленным элементам недоступна. """
 
-    return {'msg': 'This is statistic endpoint'}
+    db = MMDatabase()
+    if not await db.item_exists(id):
+        return JSONResponse(content=models.Error(code=404, message='Item not found').dict(), status_code=404)
+
+    items = await db.get_statistics(id, dateStart, dateEnd)
+    return models.ShopUnitStatisticResponse(items=items)
