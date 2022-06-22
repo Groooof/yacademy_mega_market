@@ -28,7 +28,6 @@ services:
     image: nginx:alpine
     ports:
       - 80:80
-      - 433:433
     depends_on:
       - mega_market
     volumes:
