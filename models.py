@@ -4,6 +4,7 @@ from typing import Optional, List
 from datetime import datetime
 from fastapi.exceptions import RequestValidationError
 from pydantic import Field
+from pydantic import BaseSettings
 
 
 UUID = UUID4
@@ -17,8 +18,16 @@ CHILDREN_FIELD = Field(description='Список всех дочерних то�
 UPDATEDATE_FIELD = Field(description='Время обновления добавляемых товаров/категорий', nullable=False, example='2022-05-28T21:12:01.000Z')
 
 
-def convert_datetime_to_iso_8601_with_z_suffix(dt: datetime) -> str:
-    return dt.strftime('%Y-%m-%dT%H:%M:%SZ')
+class EnvSettings(BaseSettings):
+    postgres_host: str
+    postgres_db: str
+    postgres_user: str
+    postgres_password: str
+    postgres_port: int
+
+    class Config:
+        env_file = ".env"
+        env_file_encoding = "utf-8"
 
 
 class Tags(Enum):
@@ -41,6 +50,11 @@ class ShopUnit(BaseModel):
     price: Optional[NonNegativeInt] = PRICE_FIELD
     children: Optional[List['ShopUnit']] = CHILDREN_FIELD
 
+    class Config:
+        json_encoders = {
+            datetime: lambda x: x.strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3] + 'Z',
+        }
+
 
 class ShopUnitImport(BaseModel):
     id: UUID = ID_FIELD
@@ -48,6 +62,11 @@ class ShopUnitImport(BaseModel):
     parentId: Optional[UUID] = PARENTID_FIELD
     type: ShopUnitType = TYPE_FIELD
     price: Optional[NonNegativeInt] = PRICE_FIELD
+
+    class Config:
+        json_encoders = {
+            datetime: lambda x: x.strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3] + 'Z',
+        }
 
     @root_validator
     def price_validator(cls, values: dict):
@@ -64,6 +83,11 @@ class ShopUnitImportRequest(BaseModel):
     items: List[ShopUnitImport] = Field(description='Импортируемые элементы.', nullable=False)
     updateDate: datetime = UPDATEDATE_FIELD
 
+    class Config:
+        json_encoders = {
+            datetime: lambda x: x.strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3] + 'Z',
+        }
+
 
 class ShopUnitStatisticUnit(BaseModel):
     id: UUID = ID_FIELD
@@ -72,6 +96,11 @@ class ShopUnitStatisticUnit(BaseModel):
     type: ShopUnitType = TYPE_FIELD
     price: Optional[NonNegativeInt] = PRICE_FIELD
     date: datetime = DATE_FIELD
+
+    class Config:
+        json_encoders = {
+            datetime: lambda x: x.strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3] + 'Z',
+        }
 
 
 class ShopUnitStatisticResponse(BaseModel):

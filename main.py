@@ -7,7 +7,6 @@ import responses
 import models
 from fastapi import Path, Query
 from database import MMDatabase
-from random import randint
 import openapi_editor
 from pprint import pprint
 
@@ -97,7 +96,7 @@ async def nodes(id: models.UUID =
 
     item = await db.get_item(id)
     item = await get_item_hierarchy(item)
-    return item.dict()
+    return item
 
 
 @app.get('/sales', responses=responses.sales_responses, tags=[models.Tags.additional])

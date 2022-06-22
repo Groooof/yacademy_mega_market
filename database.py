@@ -27,7 +27,8 @@ class DatabaseCore(IDatabaseCore):
             self.pool: Union[Pool, None] = None
 
     async def create_pool(self):
-        self.pool = await asyncpg.create_pool(host='localhost', user='postgres', password='Biktimirov9', database='mega_market')
+        env = models.EnvSettings()
+        self.pool = await asyncpg.create_pool(host=env.postgres_host, port=env.postgres_port, user=env.postgres_user, password=env.postgres_password, database=env.postgres_db)
 
     async def execute(self, command: str, args=tuple(),
                       fetch: bool = False,
@@ -206,8 +207,17 @@ class MMDatabase(DatabaseCore):
         RETURNS trigger AS 
         $$
         BEGIN
-
-            IF NEW."parentId" != OLD."parentId" THEN
+            IF (NEW.type = 'CATEGORY') AND (NEW.price IS NULL) AND (OLD.price IS NOT NULL) AND (EXISTS (SELECT 1 FROM items WHERE "parentId" = NEW.id)) THEN
+                UPDATE items SET price = OLD.price WHERE id = NEW.id;
+            END IF;
+            
+            IF NEW."parentId" = OLD."parentId" THEN
+                UPDATE items SET date = NEW.date WHERE id = OLD."parentId";
+                IF OLD.price = NEW.price THEN
+                    RETURN NEW;
+                END IF;
+                UPDATE items SET price = (SELECT * FROM get_avg_price(OLD."parentId")) WHERE id = OLD."parentId";
+            ELSE 
                 IF OLD."parentId" IS NOT NULL THEN
                     UPDATE items SET date = NEW.date WHERE id = OLD."parentId";
                     UPDATE items SET price = (SELECT * FROM get_avg_price(OLD."parentId")) WHERE id = OLD."parentId";
@@ -215,11 +225,6 @@ class MMDatabase(DatabaseCore):
                 IF NEW."parentId" IS NOT NULL THEN
                     UPDATE items SET date = NEW.date WHERE id = NEW."parentId";
                     UPDATE items SET price = (SELECT * FROM get_avg_price(NEW."parentId")) WHERE id = NEW."parentId";
-                END IF;
-            ELSIF OLD."parentId" IS NOT NULL THEN
-                UPDATE items SET date = NEW.date WHERE id = OLD."parentId";
-                IF OLD.price != NEW.price OR NEW.price IS NULL THEN
-                    UPDATE items SET price = (SELECT * FROM get_avg_price(OLD."parentId")) WHERE id = OLD."parentId";
                 END IF;
             END IF;
             RETURN NEW;
