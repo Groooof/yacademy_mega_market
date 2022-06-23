@@ -144,7 +144,7 @@ class MMDatabase(DatabaseCore):
             IF EXISTS (SELECT 1 FROM items_history WHERE item_id = NEW.id AND item_date = NEW.date) THEN 
                 UPDATE items_history 
                 SET (item_name, "item_parentId", item_type, item_price) = (NEW.name, NEW."parentId", NEW.type, NEW.price) 
-                WHERE item_id = NEW.id;
+                WHERE item_id = NEW.id AND item_date = NEW.date;
             ELSE  
                 INSERT INTO items_history (item_id, item_name, item_date, "item_parentId", item_type, item_price) 
                 VALUES (NEW.id, NEW.name, NEW.date, NEW."parentId", NEW.type, NEW.price);

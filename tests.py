@@ -33,7 +33,8 @@ map_methods = {
 }
 
 
-def simple_request(method: Methods = Methods.get, path: str = '/', params: dict = None, data: dict = None) -> requests.Response:
+def simple_request(method: Methods = Methods.get, path: str = '/', params: dict = None,
+                   data: dict = None) -> requests.Response:
     data = json.dumps(data) if data is not None else data
     return map_methods[method](f'{PROTOCOL}://{HOST}:{PORT}{path}', params=params, data=data)
 
@@ -54,17 +55,17 @@ def sales(date: str) -> requests.Response:
     return simple_request(Methods.get, '/sales', params={'date': date})
 
 
-def statistics(id: str, date_start: str, date_end: str) -> requests.Response:
+def statistics(id: str, date_start: str = None, date_end: str = None) -> requests.Response:
     return simple_request(Methods.get, f'/node/{id}/statistic', params={'dateStart': date_start, 'dateEnd': date_end})
 
 
 base_item = {
-      'id': '3fa85f64-5717-4562-b3fc-000000000001',
-      'name': f'Товар 1',
-      'parentId': None,
-      'type': 'OFFER',
-      'price': 100
-    }
+    'id': '3fa85f64-5717-4562-b3fc-000000000001',
+    'name': f'Товар 1',
+    'parentId': None,
+    'type': 'OFFER',
+    'price': 100
+}
 
 ERRS = {'validation': {'code': 400, 'message': 'Validation Failed'},
         'item_not_found': {'code': 404, 'message': 'Item not found'},
@@ -90,7 +91,7 @@ BASE_DATA = {
         {
             'id': '3fa85f64-5717-4562-b3fc-000000000002',
             'name': f'Категория 1.1',
-            'parentId': '3fa85f64-5717-4562-b3fc-000000000001',
+            'parentId': ROOT,
             'type': 'CATEGORY'
         },
         {
@@ -129,6 +130,213 @@ BASE_DATA = {
         },
     ],
     'updateDate': '2022-01-01T08:00:00.000Z'}
+
+BASE_DATA_NODES = {
+    'id': ROOT,
+    'name': f'Категория 1',
+    'parentId': None,
+    'type': 'CATEGORY',
+    'price': 150,
+    'date': '2022-01-01T08:00:00.000Z',
+    'children': [
+        {
+            'id': '3fa85f64-5717-4562-b3fc-000000000004',
+            'name': f'Товар 1',
+            'parentId': ROOT,
+            'type': 'OFFER',
+            'price': 50,
+            'date': '2022-01-01T08:00:00.000Z',
+            'children': None,
+        },
+        {
+            'id': '3fa85f64-5717-4562-b3fc-000000000002',
+            'name': f'Категория 1.1',
+            'parentId': ROOT,
+            'type': 'CATEGORY',
+            'price': 183,
+            'date': '2022-01-01T08:00:00.000Z',
+            'children': [
+                {
+                    'id': '3fa85f64-5717-4562-b3fc-000000000005',
+                    'name': f'Товар 2',
+                    'parentId': '3fa85f64-5717-4562-b3fc-000000000002',
+                    'type': 'OFFER',
+                    'price': 100,
+                    'date': '2022-01-01T08:00:00.000Z',
+                    'children': None
+                },
+                {
+                    'id': '3fa85f64-5717-4562-b3fc-000000000006',
+                    'name': f'Товар 3',
+                    'parentId': '3fa85f64-5717-4562-b3fc-000000000002',
+                    'type': 'OFFER',
+                    'price': 300,
+                    'date': '2022-01-01T08:00:00.000Z',
+                    'children': None
+                },
+                {
+                    'id': '3fa85f64-5717-4562-b3fc-000000000003',
+                    'name': f'Категория 1.2',
+                    'parentId': '3fa85f64-5717-4562-b3fc-000000000002',
+                    'type': 'CATEGORY',
+                    'price': 150,
+                    'date': '2022-01-01T08:00:00.000Z',
+                    'children': [
+                        {
+                            'id': '3fa85f64-5717-4562-b3fc-000000000007',
+                            'name': f'Товар 4',
+                            'parentId': '3fa85f64-5717-4562-b3fc-000000000003',
+                            'type': 'OFFER',
+                            'price': 150,
+                            'date': '2022-01-01T08:00:00.000Z',
+                            'children': None
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}
+
+BASE_DATA_NODES_AFTER_DEL = {
+    'id': ROOT,
+    'name': f'Категория 1',
+    'parentId': None,
+    'type': 'CATEGORY',
+    'price': 150,
+    'date': '2022-01-01T08:00:00.000Z',
+    'children': [
+        {
+            'id': '3fa85f64-5717-4562-b3fc-000000000004',
+            'name': f'Товар 1',
+            'parentId': ROOT,
+            'type': 'OFFER',
+            'price': 50,
+            'date': '2022-01-01T08:00:00.000Z',
+            'children': None,
+        },
+        {
+            'id': '3fa85f64-5717-4562-b3fc-000000000002',
+            'name': f'Категория 1.1',
+            'parentId': ROOT,
+            'type': 'CATEGORY',
+            'price': 200,
+            'date': '2022-01-01T08:00:00.000Z',
+            'children': [
+                {
+                    'id': '3fa85f64-5717-4562-b3fc-000000000005',
+                    'name': f'Товар 2',
+                    'parentId': '3fa85f64-5717-4562-b3fc-000000000002',
+                    'type': 'OFFER',
+                    'price': 100,
+                    'date': '2022-01-01T08:00:00.000Z',
+                    'children': None
+                },
+                {
+                    'id': '3fa85f64-5717-4562-b3fc-000000000006',
+                    'name': f'Товар 3',
+                    'parentId': '3fa85f64-5717-4562-b3fc-000000000002',
+                    'type': 'OFFER',
+                    'price': 300,
+                    'date': '2022-01-01T08:00:00.000Z',
+                    'children': None
+                }
+            ]
+        }
+    ]
+}
+
+SOME_CHANGES = [
+    {'items': [
+        {
+            'id': '3fa85f64-5717-4562-b3fc-000000000004',
+            'name': f'Товар 1',
+            'parentId': ROOT,
+            'type': 'OFFER',
+            'price': 100
+        }
+    ],
+        'updateDate': '2022-01-02T08:00:00.000Z'},
+    {'items': [
+        {
+            'id': '3fa85f64-5717-4562-b3fc-000000000004',
+            'name': f'Товар 1',
+            'parentId': ROOT,
+            'type': 'OFFER',
+            'price': 150
+        }
+    ],
+        'updateDate': '2022-01-03T08:00:00.000Z'},
+    {'items': [
+        {
+            'id': '3fa85f64-5717-4562-b3fc-000000000004',
+            'name': f'Товар 1',
+            'parentId': ROOT,
+            'type': 'OFFER',
+            'price': 500
+        }
+    ],
+        'updateDate': '2022-01-04T08:00:00.000Z'}
+]
+
+SALES = {
+    'items':
+    [
+        {
+            'id': '3fa85f64-5717-4562-b3fc-000000000004',
+            'name': 'Товар 1',
+            'parentId': ROOT,
+            'price': 150,
+            'type': 'OFFER',
+            'date': '2022-01-03T08:00:00.000Z'
+        },
+        {
+            'id': '3fa85f64-5717-4562-b3fc-000000000004',
+            'name': 'Товар 1',
+            'parentId': ROOT,
+            'price': 100,
+            'type': 'OFFER',
+            'date': '2022-01-02T08:00:00.000Z'
+        }
+    ]
+}
+
+ROOT_STATS = {
+    'items':
+        [
+            {
+                'date': '2022-01-01T08:00:00.000Z',
+                'id': '3fa85f64-5717-4562-b3fc-000000000001',
+                'name': 'Категория 1',
+                'parentId': None,
+                'price': 150,
+                'type': 'CATEGORY'
+            },
+            {
+                'date': '2022-01-02T08:00:00.000Z',
+                'id': '3fa85f64-5717-4562-b3fc-000000000001',
+                'name': 'Категория 1',
+                'parentId': None,
+                'price': 166,
+                'type': 'CATEGORY'
+            },
+            {
+                'date': '2022-01-03T08:00:00.000Z',
+                'id': '3fa85f64-5717-4562-b3fc-000000000001',
+                'name': 'Категория 1',
+                'parentId': None,
+                'price': 183,
+                'type': 'CATEGORY'
+            },
+            {
+                'date': '2022-01-04T08:00:00.000Z',
+                'id': '3fa85f64-5717-4562-b3fc-000000000001',
+                'name': 'Категория 1',
+                'parentId': None,
+                'price': 300,
+                'type': 'CATEGORY'}
+        ]
+}
 
 SAME_IDS = {
     'items': [
@@ -309,37 +517,73 @@ def test_wrong_date():
 
 
 @test
-def test_imports_code():
+def test_imports():
     resp = imports(BASE_DATA)
     assert resp.status_code == 200, '/imports does not work =('
 
 
+def deep_sort_children(node):
+    if node.get("children"):
+        node["children"].sort(key=lambda x: x["id"])
+
+        for child in node["children"]:
+            deep_sort_children(child)
+
+
 @test
-def test_delete_code():
+def test_nodes_and_avg_price():
+    nodes_json = nodes(ROOT).json()
+    deep_sort_children(nodes_json)
+    deep_sort_children(BASE_DATA_NODES)
+    assert nodes_json == BASE_DATA_NODES, 'Неправильный вывод /nodes'
+
+
+@test
+def test_delete():
     item = list(filter(lambda x: x['name'] == 'Категория 1.2', BASE_DATA['items']))[0]
     resp = delete(item['id'])
     assert resp.status_code == 200, '/delete does not work =('
+    nodes_json = nodes(ROOT).json()
+    deep_sort_children(nodes_json)
+    deep_sort_children(BASE_DATA_NODES_AFTER_DEL)
+    assert nodes_json == BASE_DATA_NODES_AFTER_DEL, \
+        'Удаленный элемент и его дочерние не должны быть доступны, ' \
+        'также должна обновиться цена родительских категорий'
 
 
 @test
-def test_nodes():
-    pass
+def test_sales():
+    for data in SOME_CHANGES:
+        imports(data)
+    sales_json = sales('2022-01-03T08:00:00.000Z').json()
+    SALES['items'].sort(key=lambda x: x['date'])
+    sales_json['items'].sort(key=lambda x: x['date'])
+    assert sales_json == SALES, '/sales does not work =('
+
+
+@test
+def test_statistics():
+    stats_json = statistics(ROOT).json()
+    stats_json['items'].sort(key=lambda x: x['date'])
+    ROOT_STATS['items'].sort(key=lambda x: x['date'])
+    assert stats_json == ROOT_STATS, '/statistic does not work =('
 
 
 def main():
-    # test_imports_code()
-    # test_delete_code()
-    #
+    test_imports()
+    test_nodes_and_avg_price()
+    test_delete()
+    test_sales()
+    test_statistics()
+
     # test_same_ids()
     # test_wrong_parent()
     # test_null_name()
     # test_wrong_cat_price()
     # test_wrong_offer_price()
     # test_wrong_date()
-    # delete(ROOT)
-    print(imports(None).text)
+    delete(ROOT)
 
 
 if __name__ == '__main__':
     main()
-
