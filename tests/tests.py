@@ -1,62 +1,48 @@
-import requests
-from uuid import uuid4
-import json
 from pprint import pprint
-import timeit
-from random import randint
-from enum import Enum
-import json
-
-# import ctypes
-# kernel32 = ctypes.WinDLL('kernel32')
-# hStdOut = kernel32.GetStdHandle(-11)
-# mode = ctypes.c_ulong()
-# kernel32.GetConsoleMode(hStdOut, ctypes.byref(mode))
-# mode.value |= 4
-# kernel32.SetConsoleMode(hStdOut, mode)
-
-PROTOCOL = 'http'
-HOST = 'localhost'
-PORT = 80
+from api import *
 
 
-class Methods(Enum):
-    get = 'GET'
-    post = 'POST'
-    delete = 'DELETE'
+class ColorsMeta(type):
+    def __new__(cls, class_name, parents, attributes):
+        for attr in attributes:
+            if attr.startswith('_'): continue
+            attributes[attr] = cls.__num_to_color(attributes[attr])
+        return type(class_name, parents, attributes)
+
+    @staticmethod
+    def __num_to_color(num):
+        return lambda x='': f'\033[{num}m{x}\033[m'
 
 
-map_methods = {
-    Methods.get: requests.get,
-    Methods.post: requests.post,
-    Methods.delete: requests.delete
-}
+class CT(metaclass=ColorsMeta):
+    red = 91
+    green = 92
+    yellow = 33
+    blue = 34
+    italic = 3
 
 
-def simple_request(method: Methods = Methods.get, path: str = '/', params: dict = None,
-                   data: dict = None) -> requests.Response:
-    data = json.dumps(data) if data is not None else data
-    return map_methods[method](f'{PROTOCOL}://{HOST}:{PORT}{path}', params=params, data=data)
+class test(object):
+    methods = []
 
+    def __init__(self, func):
+        self._method = func
+        self.__class__.methods.append(func)
 
-def imports(data: dict) -> requests.Response:
-    return simple_request(Methods.post, '/imports', data=data)
-
-
-def delete(id: str) -> requests.Response:
-    return simple_request(Methods.delete, f'/delete/{id}')
-
-
-def nodes(id: str) -> requests.Response:
-    return simple_request(Methods.get, f'/nodes/{id}')
-
-
-def sales(date: str) -> requests.Response:
-    return simple_request(Methods.get, '/sales', params={'date': date})
-
-
-def statistics(id: str, date_start: str = None, date_end: str = None) -> requests.Response:
-    return simple_request(Methods.get, f'/node/{id}/statistic', params={'dateStart': date_start, 'dateEnd': date_end})
+    def __call__(self, *args, **kwargs):
+        test_num = self.__class__.methods.index(self._method) + 1
+        print(f'Test {test_num} {CT.yellow(self._method.__name__)}')
+        if self._method.__doc__ is not None:
+            print(f'{CT.italic(self._method.__doc__.strip())}')
+        try:
+            self._method()
+        except AssertionError as ex:
+            print(CT.red('Failed: ') + ''.join(ex.args))
+            return
+        else:
+            print(CT.green('Passed'))
+        finally:
+            print()
 
 
 base_item = {
@@ -435,49 +421,6 @@ WRONG_DATE = {
 }
 
 
-class ColorsMeta(type):
-    def __new__(cls, class_name, parents, attributes):
-        for attr in attributes:
-            if attr.startswith('_'): continue
-            attributes[attr] = cls.__num_to_color(attributes[attr])
-        return type(class_name, parents, attributes)
-
-    @staticmethod
-    def __num_to_color(num):
-        return lambda x='': f'\033[{num}m{x}\033[m'
-
-
-class CT(metaclass=ColorsMeta):
-    red = 91
-    green = 92
-    yellow = 33
-    blue = 34
-    italic = 3
-
-
-class test(object):
-    methods = []
-
-    def __init__(self, func):
-        self._method = func
-        self.__class__.methods.append(func)
-
-    def __call__(self, *args, **kwargs):
-        test_num = self.__class__.methods.index(self._method) + 1
-        print(f'Test {test_num} {CT.yellow(self._method.__name__)}')
-        if self._method.__doc__ is not None:
-            print(f'{CT.italic(self._method.__doc__.strip())}')
-        try:
-            self._method()
-        except AssertionError as ex:
-            print(CT.red('Failed: ') + ''.join(ex.args))
-            return
-        else:
-            print(CT.green('Passed'))
-        finally:
-            print()
-
-
 @test
 def test_same_ids():
     resp = imports(SAME_IDS)
@@ -576,12 +519,12 @@ def main():
     test_sales()
     test_statistics()
 
-    # test_same_ids()
-    # test_wrong_parent()
-    # test_null_name()
-    # test_wrong_cat_price()
-    # test_wrong_offer_price()
-    # test_wrong_date()
+    test_same_ids()
+    test_wrong_parent()
+    test_null_name()
+    test_wrong_cat_price()
+    test_wrong_offer_price()
+    test_wrong_date()
     delete(ROOT)
 
 
