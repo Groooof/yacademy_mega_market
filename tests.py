@@ -327,16 +327,17 @@ def test_nodes():
 
 
 def main():
-    test_imports_code()
-    test_delete_code()
-
-    test_same_ids()
-    test_wrong_parent()
-    test_null_name()
-    test_wrong_cat_price()
-    test_wrong_offer_price()
-    test_wrong_date()
-    delete(ROOT)
+    # test_imports_code()
+    # test_delete_code()
+    #
+    # test_same_ids()
+    # test_wrong_parent()
+    # test_null_name()
+    # test_wrong_cat_price()
+    # test_wrong_offer_price()
+    # test_wrong_date()
+    # delete(ROOT)
+    print(imports(None).text)
 
 
 if __name__ == '__main__':

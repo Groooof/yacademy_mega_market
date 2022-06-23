@@ -46,7 +46,7 @@ async def validation_exception_handler(request, exc):
 
 
 @app.post('/imports', responses=responses.imports_responses, status_code=200, tags=[models.Tags.main])
-async def imports(data: models.ShopUnitImportRequest = None):
+async def imports(data: models.ShopUnitImportRequest):
     """ Импортирует новые товары и/или категории. Товары/категории импортированные повторно обновляют текущие. """
 
     db = MMDatabase()
