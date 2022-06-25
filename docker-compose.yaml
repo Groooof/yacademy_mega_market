@@ -5,9 +5,9 @@ volumes:
 
 services:
   mega_market:
+    restart: always
     container_name: mega_market
     build: .
-    restart: always
     expose:
       - 80
     env_file:
@@ -15,6 +15,7 @@ services:
     depends_on:
       - postgres
   postgres:
+    restart: always
     container_name: postgres_container
     image: postgres:latest
     env_file:
@@ -24,6 +25,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
   nginx:
+    restart: always
     container_name: nginx
     image: nginx:alpine
     ports:
